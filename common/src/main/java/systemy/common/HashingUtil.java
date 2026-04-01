@@ -7,4 +7,9 @@ public class HashingUtil {
         int hash = (hostname.hashCode() + max) * (32768/max +abs(min));
         return hash;
     }
+
+    public int hash(String hostname) {
+        int hash = (hostname.hashCode() + 2147483647) * (32768/2147483647 +abs(-2147483647));
+        return hash;
+    }
 }
