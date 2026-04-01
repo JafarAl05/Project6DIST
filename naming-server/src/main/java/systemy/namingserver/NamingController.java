@@ -1,4 +1,6 @@
 package systemy.namingserver;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Set;
@@ -26,10 +28,18 @@ public class NamingController {
     }
 
     @PostMapping("/nodes")
-    public String registerNode(@RequestBody NodeRegistrationRequest request) {
+    public ResponseEntity<String> registerNode(@RequestBody NodeRegistrationRequest request) {
+        // Check if the map already contains this node ID
+        if (mapManager.getNameMap().containsKey(request.nodeId())) {
+            // Return HTTP 409 Conflict if it's a duplicate
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Node already exists!");
+        }
+
         mapManager.addNode(request.nodeId(), request.ipAddress());
-        return "Node registered successfully!";
+        return ResponseEntity.ok("Node registered successfully!");
     }
+
+
 
     @DeleteMapping("/nodes/{nodeId}")
     public String removeNode(@PathVariable("nodeId") int nodeId, @RequestParam("ip") String ip) {
