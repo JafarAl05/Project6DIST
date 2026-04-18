@@ -19,14 +19,10 @@ public class RestClient {
                 .build();
     }
 
-    // =========================================================================
-    // 1. REGISTRATION (Updated for Role B's NodeRegistrationRequest record)
-    // =========================================================================
-    // Notice it now takes 'int nodeId' instead of 'String nodeName'
+
     public boolean registerNode(int nodeId, String ipAddress) {
         String url = BASE_URL + "/nodes";
 
-        // MATCHING ROLE B: {"nodeId": 1234, "ipAddress": "192.168.1.5"}
         String jsonPayload = String.format("{\"nodeId\": %d, \"ipAddress\": \"%s\"}", nodeId, ipAddress);
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -38,7 +34,6 @@ public class RestClient {
         try {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-            // Role B's code just returns 200 OK with a success string.
             if (response.statusCode() == 200) {
                 return true;
             } else {
@@ -51,11 +46,8 @@ public class RestClient {
         }
     }
 
-    // =========================================================================
-    // 2. REMOVAL (Updated for Role B's DeleteMapping)
-    // =========================================================================
+
     public void removeNode(int nodeId, String ipAddress) {
-        // MATCHING ROLE B: DELETE /nodes/{nodeId}?ip={ip}
         String url = BASE_URL + "/nodes/" + nodeId + "?ip=" + ipAddress;
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -75,9 +67,7 @@ public class RestClient {
         }
     }
 
-    // =========================================================================
-    // 3. FILE LOCATION (Updated Regex for NodeResponse record)
-    // =========================================================================
+
     public String getFileLocation(String filename) {
         String url = BASE_URL + "/files/" + filename;
 
@@ -99,11 +89,7 @@ public class RestClient {
         }
     }
 
-    // =========================================================================
-    // HELPER: Regex JSON Parser (Updated for camelCase "ipAddress")
-    // =========================================================================
     private String extractIpFromJson(String json) {
-        // MATCHING ROLE B: Now looking for "ipAddress" instead of "ip_address"
         Pattern pattern = Pattern.compile("\"ipAddress\"\\s*:\\s*\"([^\"]+)\"");
         Matcher matcher = pattern.matcher(json);
 
