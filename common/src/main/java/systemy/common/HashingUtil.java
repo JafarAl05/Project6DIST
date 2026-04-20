@@ -9,7 +9,6 @@ public class HashingUtil {
 
         int rawHash = hostname.hashCode();
 
-
         int positiveHash = rawHash & 0x7fffffff;
 
         return positiveHash % 32768;
