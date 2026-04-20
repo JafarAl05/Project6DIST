@@ -1,10 +1,12 @@
 package systemy.namingserver;
 
+import org.springframework.stereotype.Service;
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
+@Service
 public class MapManager {
-    private HashMap<Integer, String> nameMap;
+    private ConcurrentHashMap<Integer, String> nameMap;
 
     public MapManager() {
         try {
@@ -14,7 +16,7 @@ public class MapManager {
         }
     }
 
-    public HashMap<Integer, String> getNameMap() {
+    public ConcurrentHashMap<Integer, String> getNameMap() {
         return nameMap;
     }
 
