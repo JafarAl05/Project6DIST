@@ -48,6 +48,10 @@ public class MapManager {
         for (int key : nameMap.keySet()) {
             System.out.println("Sent: " + message + "to " + nameMap.get(key));
         }
+        notifyNS(message);
+    }
+
+    public void notifyNS(String message) {
         System.out.println("Sent: " + message + "to Name Server");
     }
 }
