@@ -40,6 +40,7 @@ public class RestClient {
 
             // Role B's code just returns 200 OK with a success string.
             if (response.statusCode() == 200) {
+                System.out.println("Node successfully registered. Status code: " + response.statusCode());
                 return true;
             } else {
                 System.err.println("Registration failed with HTTP " + response.statusCode());
@@ -90,7 +91,9 @@ public class RestClient {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200) {
-                return extractIpFromJson(response.body());
+                String ip = extractIpFromJson(response.body());
+                System.out.println("IP address successfully found: " + ip);
+                return ip;
             } else {
                 return "Error: File not found or Naming Server issue (HTTP " + response.statusCode() + ").";
             }
