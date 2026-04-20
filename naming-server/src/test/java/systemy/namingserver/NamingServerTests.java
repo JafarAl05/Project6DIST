@@ -19,15 +19,13 @@ public class NamingServerTests {
 
     @BeforeAll
     public static void setup() {
-        // Simulating two different PCs (Clients) on the network
+
         pc1Client = new RestClient();
         pc2Client = new RestClient();
         System.out.println("Starting Naming Server Test Suite...");
     }
 
-    // =========================================================================
-    // TASK 1: Add a node with a unique node name
-    // =========================================================================
+
     @Test
     @Order(1)
     @DisplayName("1. Add a node with a unique node name")
@@ -38,9 +36,7 @@ public class NamingServerTests {
         assertTrue(success, "Server should accept a brand new, unique node.");
     }
 
-    // =========================================================================
-    // TASK 2: Add a node with an existing node name
-    // =========================================================================
+
     @Test
     @Order(2)
     @DisplayName("2. Add a node with an existing node name")
@@ -54,14 +50,12 @@ public class NamingServerTests {
         assertFalse(success, "Server MUST reject a duplicate node ID and return false.");
     }
 
-    // =========================================================================
-    // TASK 3: Send a filename and the IP address (Standard Routing)
-    // =========================================================================
+
     @Test
     @Order(3)
     @DisplayName("3. Send a filename and get the correct IP address")
     public void testStandardRouting() {
-        // Arrange: Add a second node so we have a network of 2 nodes
+
         int nodeBetaId = HashingUtil.hash("Node-Beta");
         pc1Client.registerNode(nodeBetaId, "192.168.1.20");
 
@@ -73,9 +67,7 @@ public class NamingServerTests {
         assertFalse(resultIp.startsWith("Error"), "Server failed to return an IP address for the file.");
     }
 
-    // =========================================================================
-    // TASK 4: Send a filename with a hash smaller than the smallest hash
-    // =========================================================================
+
     @Test
     @Order(4)
     @DisplayName("4. Wrap-around routing (hash smaller than smallest node)")
@@ -84,7 +76,6 @@ public class NamingServerTests {
         int nodeOmegaId = HashingUtil.hash("Node-Omega");
         pc1Client.registerNode(nodeOmegaId, "192.168.1.99"); // Let's assume this is the biggest
 
-        // 2. We use a loop to dynamically find a string that hashes to a very small number (< 10)
         String tinyHashFile = "default";
         for (int i = 0; i < 10000; i++) {
             if (HashingUtil.hash("file" + i) < 10) {
@@ -102,9 +93,7 @@ public class NamingServerTests {
         assertFalse(resultIp.startsWith("Error"), "Routing algorithm crashed on wrap-around edge case!");
     }
 
-    // =========================================================================
-    // TASK 5: Send a filename and at the same time remove the node
-    // =========================================================================
+
     @Test
     @Order(5)
     @DisplayName("5. Concurrency: Get file location and remove node simultaneously")
@@ -138,9 +127,6 @@ public class NamingServerTests {
         assertTrue(finished, "Concurrency test deadlocked or timed out.");
     }
 
-    // =========================================================================
-    // TASK 6: Ask from two PCs for an IP address of a filename
-    // =========================================================================
     @Test
     @Order(6)
     @DisplayName("6. Concurrency: Two PCs asking for a file simultaneously")

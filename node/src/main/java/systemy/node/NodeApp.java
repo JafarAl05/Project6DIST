@@ -1,6 +1,6 @@
 package systemy.node;
 
-import systemy.common.HashingUtil; // IMPORTING ROLE A's CODE!
+import systemy.common.HashingUtil;
 
 import java.net.InetAddress;
 import java.util.Scanner;
@@ -18,7 +18,6 @@ public class NodeApp {
         System.out.print("Enter a unique name for this node (e.g., Node-1): ");
         String nodeName = scanner.nextLine();
 
-        // NEW: We must hash our own name to get the ID for Role B's server!
         int myNodeId = HashingUtil.hash(nodeName);
         System.out.println("--> Calculated Node ID: " + myNodeId);
 
@@ -26,7 +25,7 @@ public class NodeApp {
         try {
             myIp = InetAddress.getLocalHost().getHostAddress();
         } catch (Exception e) {
-            System.out.println("⚠️ Could not determine local IP. Defaulting to 127.0.0.1.");
+            System.out.println(" Could not determine local IP. Defaulting to 127.0.0.1.");
         }
 
         // Updated to send the Integer ID, not the String name
@@ -34,11 +33,11 @@ public class NodeApp {
         boolean registered = restClient.registerNode(myNodeId, myIp);
 
         if (!registered) {
-            System.out.println("❌ Registration failed. Exiting...");
+            System.out.println(" Registration failed. Exiting...");
             return;
         }
 
-        System.out.println("✅ Successfully registered with the Naming Server!");
+        System.out.println(" Successfully registered with the Naming Server!");
 
         // The Graceful Shutdown Hook
         String finalMyIp = myIp;
