@@ -43,4 +43,11 @@ public class MapManager {
     public String getIP(int nodeID) {
         return nameMap.get(nodeID);
     }
+
+    public void notifyNodes(String message) {
+        for (int key : nameMap.keySet()) {
+            System.out.println("Sent: " + message + "to " + nameMap.get(key));
+        }
+        System.out.println("Sent: " + message + "to Name Server");
+    }
 }
