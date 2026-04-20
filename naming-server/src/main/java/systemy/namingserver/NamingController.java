@@ -1,8 +1,12 @@
 package systemy.namingserver;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 import static systemy.common.HashingUtil.hash;
@@ -39,11 +43,61 @@ public class NamingController {
         return ResponseEntity.ok("Node registered successfully!");
     }
 
-
-
     @DeleteMapping("/nodes/{nodeId}")
     public String removeNode(@PathVariable("nodeId") int nodeId, @RequestParam("ip") String ip) {
         mapManager.removeNode(nodeId, ip);
         return "Node removed successfully.";
+    }
+
+    @GetMapping("/nodes/{nodeId}/ip")
+    public ResponseEntity<String> getNodeIp(@PathVariable int nodeId) {
+        String ip = mapManager.getIP(nodeId);
+        if (ip != null) {
+            return ResponseEntity.ok(ip);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/nodes/{nodeId}/neighbors")
+    public ResponseEntity<String> getNeighbors(@PathVariable int nodeId) {
+        Set<Integer> keySet = mapManager.getNameMap().keySet();
+
+        // Failsafe: If there is only 1 node, it is its own neighbor
+        if (keySet.size() <= 1) {
+            String json = String.format("{\"previousID\": %d, \"nextID\": %d}", nodeId, nodeId);
+            return ResponseEntity.ok(json);
+        }
+
+        // 1. Put the ring in a sorted list so they form a proper number line
+        List<Integer> sortedNodes = new ArrayList<>(keySet);
+        Collections.sort(sortedNodes);
+
+        // 2. Find where the target node sits in the list
+        int currentIndex = sortedNodes.indexOf(nodeId);
+
+        if (currentIndex == -1) {
+            return ResponseEntity.notFound().build(); // The node doesn't exist!
+        }
+
+        // 3. Find the previous node (wrapping around to the end if we are at the very beginning)
+        int previousId;
+        if (currentIndex == 0) {
+            previousId = sortedNodes.get(sortedNodes.size() - 1);
+        } else {
+            previousId = sortedNodes.get(currentIndex - 1);
+        }
+
+        // 4. Find the next node (wrapping around to the beginning if we are at the very end)
+        int nextId;
+        if (currentIndex == sortedNodes.size() - 1) {
+            nextId = sortedNodes.get(0);
+        } else {
+            nextId = sortedNodes.get(currentIndex + 1);
+        }
+
+        // 5. Return it as a simple JSON string so Role C's RestClient can parse it
+        String jsonResponse = String.format("{\"previousID\": %d, \"nextID\": %d}", previousId, nextId);
+        return ResponseEntity.ok(jsonResponse);
     }
 }

@@ -12,10 +12,10 @@ public class Broadcaster {
     public Broadcaster(int socketNum, String broadcastIP) throws UnknownHostException, SocketException {
         address = InetAddress.getByName(broadcastIP);
         port = socketNum;
-        socket = new DatagramSocket(port);
+        socket = new DatagramSocket();
     }
 
-    private void sendFile(String nodeName, String ipAddress) throws IOException {
+    public void sendFile(String nodeName, String ipAddress) throws IOException {
         String messageContents = nodeName + "," + ipAddress;
         byte[] message = messageContents.getBytes(StandardCharsets.UTF_8);
         int length = message.length;
