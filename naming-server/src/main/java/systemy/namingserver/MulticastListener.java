@@ -51,14 +51,14 @@ public class MulticastListener implements Runnable {
                     String nodeName = parts[0];
                     String nodeIp = parts[1];
 
-                    // Calculate hash [cite: 552]
+                    // Calculate hash
                     int nodeHash = HashingUtil.hash(nodeName);
 
-                    // Add to Map
-                    mapManager.addNode(nodeHash, nodeIp);
-
-                    // Respond with the number of existing nodes that are currently in the network
+                    // FIX: Respond with the number of existing nodes FIRST!
                     int currentCount = mapManager.getNameMap().size();
+
+                    // THEN Add to Map
+                    mapManager.addNode(nodeHash, nodeIp);
 
                     // Convert the number into a byte array so it can travel over the network
                     String responseMessage = String.valueOf(currentCount);

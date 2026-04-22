@@ -1,7 +1,6 @@
 package systemy.node;
 
 import systemy.common.HashingUtil;
-
 import java.net.InetAddress;
 import java.util.Scanner;
 
@@ -21,55 +20,106 @@ public class NodeApp {
         int myNodeId = HashingUtil.hash(nodeName);
         System.out.println("--> Calculated Node ID: " + myNodeId);
 
-        String myIp = "127.0.0.1";
+        String resolvedIp = "127.0.0.1";
         try {
-            myIp = InetAddress.getLocalHost().getHostAddress();
+            resolvedIp = InetAddress.getLocalHost().getHostAddress();
         } catch (Exception e) {
-            System.out.println(" Could not determine local IP. Defaulting to 127.0.0.1.");
+            System.out.println("⚠️ Could not determine local IP. Defaulting to 127.0.0.1.");
+        }
+        final String myIp = resolvedIp; // Adding 'final' makes Java happy!
+
+        // 1. Initialize the Brain and Ears
+        NeighborInfo neighborInfo = new NeighborInfo(myNodeId);
+
+        UnicastListener unicastListener = new UnicastListener(neighborInfo);
+        unicastListener.start(8081); // Start listening for specific neighbor updates
+
+        NodeMulticastListener nodeMultiListener = new NodeMulticastListener(neighborInfo, restClient);
+        nodeMultiListener.startListening(); // Start listening for new nodes joining
+
+        // 2. Bootstrap via Multicast (Using Role A's Broadcaster)
+        System.out.println("Attempting to join network...");
+        int networkSize = -1;
+        try {
+            Broadcaster roleABroadcaster = new Broadcaster(8888, "224.0.0.200");
+            networkSize = roleABroadcaster.broadcastPresence(nodeName, myIp);
+        } catch (Exception e) {
+            System.out.println(" Failed to broadcast: " + e.getMessage());
         }
 
-        // Updated to send the Integer ID, not the String name
-        System.out.println("Attempting to register [" + myNodeId + "] at IP [" + myIp + "]...");
-        boolean registered = restClient.registerNode(myNodeId, myIp);
-
-        if (!registered) {
+        if (networkSize == -1) {
             System.out.println(" Registration failed. Exiting...");
+            unicastListener.stop();
             return;
         }
 
-        System.out.println(" Successfully registered with the Naming Server!");
+        if (networkSize < 1) {
+            System.out.println(" I am the first node in the network! (Setting Prev/Next to myself)");
+        } else {
+            System.out.println(networkSize + " other node(s) exist. Waiting for my neighbors to contact me...");
+        }
 
-        // The Graceful Shutdown Hook
-        String finalMyIp = myIp;
+        // 3. Graceful Shutdown Hook (Bridging the gap when you close the app)
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("\n[System] Intercepted shutdown signal. Cleaning up...");
-            // Updated to send both ID and IP to match Role B's DELETE mapping
-            restClient.removeNode(myNodeId, finalMyIp);
+            System.out.println("\n[System] Shutting down. Bridging the ring...");
+
+            // Only bridge if we actually have different neighbors
+            if (neighborInfo.getPreviousID() != myNodeId && neighborInfo.getNextID() != myNodeId) {
+                String prevIp = restClient.getNodeIpById(neighborInfo.getPreviousID());
+                String nextIp = restClient.getNodeIpById(neighborInfo.getNextID());
+
+                // Send the ID of the next node to the previous node
+                if (prevIp != null) restClient.updatePeer(prevIp, "next", neighborInfo.getNextID());
+
+                // Send the ID of the previous node to the next node
+                if (nextIp != null) restClient.updatePeer(nextIp, "previous", neighborInfo.getPreviousID());
+            }
+
+            restClient.removeNode(myNodeId, myIp);
+            unicastListener.stop();
             System.out.println("[System] Node safely removed. Goodbye!");
         }));
 
-        // The Interactive Command Line Loop
+        // 4. Interactive Menu
         while (true) {
             System.out.println("\n--- Main Menu ---");
             System.out.println("1. Find a file location");
-            System.out.println("2. Exit and remove node");
-            System.out.print("Choose an option (1 or 2): ");
+            System.out.println("2. View my Ring Status (Neighbors)");
+            System.out.println("3. Ping Next Node (Test Failure Detection)");
+            System.out.println("4. Exit and remove node");
+            System.out.print("Choose an option: ");
 
             String choice = scanner.nextLine();
 
             if ("1".equals(choice)) {
-                System.out.print("Enter the filename (e.g., doc1.txt): ");
+                System.out.print("Enter the filename: ");
                 String filename = scanner.nextLine();
-
-                System.out.println("🔍 Asking Naming Server for location...");
                 String resultIp = restClient.getFileLocation(filename);
-
                 System.out.println("--> Result: " + resultIp);
             }
             else if ("2".equals(choice)) {
+                System.out.println(neighborInfo.toString());
+            }
+            else if ("3".equals(choice)) {
+                System.out.println("🔍 Pinging NEXT node (" + neighborInfo.getNextID() + ")...");
+                String nextIp = restClient.getNodeIpById(neighborInfo.getNextID());
+
+                // We use our updatePeer method as a dummy "ping"
+                try {
+                    if (nextIp == null) throw new Exception("IP not found");
+                    restClient.updatePeer(nextIp, "ping", myNodeId);
+                } catch (Exception e) {
+                    System.out.println("PING FAILED! Node " + neighborInfo.getNextID() + " is dead!");
+                    System.out.println(" Asking Naming Server for dead node's neighbors...");
+
+                    String neighborsJson = restClient.getNeighborsOfFailedNode(neighborInfo.getNextID());
+                    System.out.println("--> Naming Server replied: " + neighborsJson);
+                }
+            }
+            else if ("4".equals(choice)) {
                 System.exit(0);
             } else {
-                System.out.println("⚠️ Invalid option. Please type 1 or 2.");
+                System.out.println(" Invalid option.");
             }
         }
     }
