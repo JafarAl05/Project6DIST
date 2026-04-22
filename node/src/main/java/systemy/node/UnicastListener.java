@@ -18,10 +18,11 @@ public class UnicastListener {
         this.neighborInfo = neighborInfo;
     }
 
-    public void start(int port) {
+    // New method: Accepts the IP and binds strictly to it!
+    public void start(String ipAddress, int port) {
         try {
-            // Start a lightweight HTTP server on the given port
-            server = HttpServer.create(new InetSocketAddress(port), 0);
+            // By passing the IP here, we restrict the port to ONLY this specific container's IP
+            server = HttpServer.create(new InetSocketAddress(ipAddress, port), 0);
 
             // Endpoint 1: Existing node tells us it is our PREVIOUS neighbor
             server.createContext("/update/previous", new PreviousHandler());

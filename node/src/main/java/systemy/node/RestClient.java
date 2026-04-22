@@ -112,13 +112,14 @@ public class RestClient {
      * @param newId The new ID they should save in their brain
      */
     public void updatePeer(String targetIp, String parameterToUpdate, int newId) {
-        // We hit port 8081 because that is where the UnicastListener lives!
-        String url = "http://" + targetIp + ":8081/update/" + parameterToUpdate + "?id=" + newId;
+        // Notice we REMOVED the :8081 because targetIp now has the port attached to it!
+        String url = "http://" + targetIp + "/update/" + parameterToUpdate + "?id=" + newId;
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .POST(HttpRequest.BodyPublishers.noBody()) // No JSON
                 .build();
+
 
         try {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
