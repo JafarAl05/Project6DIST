@@ -44,19 +44,19 @@ public class NodeApp {
             Broadcaster roleABroadcaster = new Broadcaster(8888, "224.0.0.200");
             networkSize = roleABroadcaster.broadcastPresence(nodeName, myIp);
         } catch (Exception e) {
-            System.out.println(" Failed to broadcast: " + e.getMessage());
+            System.out.println("❌ Failed to broadcast: " + e.getMessage());
         }
 
         if (networkSize == -1) {
-            System.out.println(" Registration failed. Exiting...");
+            System.out.println("❌ Registration failed. Exiting...");
             unicastListener.stop();
             return;
         }
 
         if (networkSize < 1) {
-            System.out.println(" I am the first node in the network! (Setting Prev/Next to myself)");
+            System.out.println("🌟 I am the first node in the network! (Setting Prev/Next to myself)");
         } else {
-            System.out.println(networkSize + " other node(s) exist. Waiting for my neighbors to contact me...");
+            System.out.println("⏳ " + networkSize + " other node(s) exist. Waiting for my neighbors to contact me...");
         }
 
         // 3. Graceful Shutdown Hook (Bridging the gap when you close the app)
@@ -109,17 +109,52 @@ public class NodeApp {
                     if (nextIp == null) throw new Exception("IP not found");
                     restClient.updatePeer(nextIp, "ping", myNodeId);
                 } catch (Exception e) {
-                    System.out.println("PING FAILED! Node " + neighborInfo.getNextID() + " is dead!");
-                    System.out.println(" Asking Naming Server for dead node's neighbors...");
+                    // =========================================================================
+                    // ADDED LOGIC: Failure Recovery (Diagnosis, Surgery, Cleanup)
+                    // =========================================================================
+                    int deadNodeId = neighborInfo.getNextID();
+                    System.out.println("🚨 PING FAILED! Node " + deadNodeId + " is dead!");
+                    System.out.println("🛠️ Asking Naming Server for dead node's neighbors...");
 
-                    String neighborsJson = restClient.getNeighborsOfFailedNode(neighborInfo.getNextID());
+                    String neighborsJson = restClient.getNeighborsOfFailedNode(deadNodeId);
                     System.out.println("--> Naming Server replied: " + neighborsJson);
+
+                    if (neighborsJson != null) {
+                        try {
+                            // Strip away the JSON brackets/quotes so we just have the numbers
+                            String cleanedJson = neighborsJson.replaceAll("[^0-9,]", "");
+                            String[] parts = cleanedJson.split(",");
+                            int survivingNext = Integer.parseInt(parts[1]);
+
+                            System.out.println("🩹 Patching the ring...");
+
+                            // Step A: Update my own brain
+                            neighborInfo.setNextID(survivingNext);
+                            System.out.println("--> Updated my own NEXT pointer to: " + survivingNext);
+
+                            // Step B: Tell the surviving next node to point its PREVIOUS back to me
+                            String survivingNextIp = restClient.getNodeIpById(survivingNext);
+                            if (survivingNextIp != null) {
+                                restClient.updatePeer(survivingNextIp, "previous", myNodeId);
+                                System.out.println("--> Told Node " + survivingNext + " that its new PREV is " + myNodeId);
+                            }
+
+                            // Step C: Cleanup the Naming Server
+                            System.out.println("🧹 Removing dead node from Naming Server...");
+                            restClient.removeNode(deadNodeId, nextIp != null ? nextIp : "");
+
+                            System.out.println("✅ Failure recovery successfully completed!");
+
+                        } catch (Exception ex) {
+                            System.out.println("❌ Failed to parse Naming Server response or patch the ring.");
+                        }
+                    }
                 }
             }
             else if ("4".equals(choice)) {
                 System.exit(0);
             } else {
-                System.out.println(" Invalid option.");
+                System.out.println("⚠️ Invalid option.");
             }
         }
     }
