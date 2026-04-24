@@ -42,7 +42,7 @@ public class NodeApp {
         NeighborInfo neighborInfo = new NeighborInfo(myNodeId);
 
         UnicastListener unicastListener = new UnicastListener(neighborInfo);
-        unicastListener.start(UNICAST_PORT);
+        unicastListener.start(myIp, UNICAST_PORT);
 
         NodeMulticastListener nodeMultiListener = new NodeMulticastListener(neighborInfo, restClient);
         nodeMultiListener.startListening();
