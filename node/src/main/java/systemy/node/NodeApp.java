@@ -71,6 +71,8 @@ public class NodeApp {
             syncNeighborsFromNamingServer(restClient, neighborInfo, myNodeId);
         }
 
+        startNeighborRefreshLoop(restClient, neighborInfo, myNodeId);
+
         // --- 5. Graceful Shutdown Hook ---
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("\n[System] Shutdown initiated. Bridging the ring...");
@@ -95,7 +97,7 @@ public class NodeApp {
     private static void runMenuLoop(Scanner scanner, RestClient restClient, NeighborInfo neighborInfo, int myNodeId, String myIp) {
         while (true) {
             System.out.println("\n--- Main Menu ---");
-            System.out.println("1. Find a file location");
+            System.out.println("1. Find a file location hey hey hey");
             System.out.println("2. View my Ring Status (Neighbors)");
             System.out.println("3. Ping Next Node (Test Failure Detection)");
             System.out.println("4. Exit and remove node");
@@ -175,9 +177,7 @@ public class NodeApp {
         for (int attempt = 1; attempt <= 5; attempt++) {
             int[] neighbors = restClient.getNeighborsById(myNodeId);
             if (neighbors != null) {
-                neighborInfo.setPreviousID(neighbors[0]);
-                neighborInfo.setNextID(neighbors[1]);
-                System.out.println("[System] Neighbor sync complete. Prev=" + neighbors[0] + ", Next=" + neighbors[1]);
+                applyNeighborSnapshot(neighborInfo, neighbors[0], neighbors[1], true);
                 return;
             }
 
@@ -190,6 +190,37 @@ public class NodeApp {
         }
 
         System.err.println("[Warning] Could not sync neighbors from Naming Server after bootstrap.");
+    }
+
+    private static void startNeighborRefreshLoop(RestClient restClient, NeighborInfo neighborInfo, int myNodeId) {
+        Thread refreshThread = new Thread(() -> {
+            while (!Thread.currentThread().isInterrupted()) {
+                try {
+                    Thread.sleep(2000L);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+
+                int[] neighbors = restClient.getNeighborsById(myNodeId);
+                if (neighbors != null) {
+                    applyNeighborSnapshot(neighborInfo, neighbors[0], neighbors[1], false);
+                }
+            }
+        });
+        refreshThread.setDaemon(true);
+        refreshThread.setName("neighbor-refresh-" + myNodeId);
+        refreshThread.start();
+    }
+
+    private static void applyNeighborSnapshot(NeighborInfo neighborInfo, int previousId, int nextId, boolean verbose) {
+        boolean changed = neighborInfo.getPreviousID() != previousId || neighborInfo.getNextID() != nextId;
+        neighborInfo.setPreviousID(previousId);
+        neighborInfo.setNextID(nextId);
+
+        if (verbose || changed) {
+            System.out.println("[System] Neighbor sync complete. Prev=" + previousId + ", Next=" + nextId);
+        }
     }
 
     private static void printHeader() {

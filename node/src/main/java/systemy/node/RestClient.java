@@ -9,6 +9,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class RestClient {
+    private static final int PEER_RETRY_COUNT = 5;
+    private static final long PEER_RETRY_DELAY_MS = 300L;
 
     private static final String DEFAULT_BASE_URL = "http://server:8080";
     private final HttpClient httpClient;
@@ -126,15 +128,21 @@ public class RestClient {
                 .build();
 
 
-        try {
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() == 200) {
-                System.out.println("Successfully updated peer at " + targetIp);
-                return true;
+        for (int attempt = 1; attempt <= PEER_RETRY_COUNT; attempt++) {
+            try {
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() == 200) {
+                    System.out.println("Successfully updated peer at " + targetIp);
+                    return true;
+                }
+                System.err.println("Peer at " + targetIp + " responded with HTTP " + response.statusCode());
+            } catch (Exception e) {
+                if (attempt == PEER_RETRY_COUNT) {
+                    System.err.println("Could not reach peer at " + targetIp + ". They might be dead!");
+                }
             }
-            System.err.println("Peer at " + targetIp + " responded with HTTP " + response.statusCode());
-        } catch (Exception e) {
-            System.err.println("Could not reach peer at " + targetIp + ". They might be dead!");
+
+            pauseBetweenPeerAttempts();
         }
         return false;
     }
@@ -222,11 +230,26 @@ public class RestClient {
                 .POST(HttpRequest.BodyPublishers.noBody())
                 .build();
 
+        for (int attempt = 1; attempt <= PEER_RETRY_COUNT; attempt++) {
+            try {
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() == 200) {
+                    return true;
+                }
+            } catch (Exception e) {
+                // Retry before declaring the peer dead.
+            }
+
+            pauseBetweenPeerAttempts();
+        }
+        return false;
+    }
+
+    private void pauseBetweenPeerAttempts() {
         try {
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            return response.statusCode() == 200;
-        } catch (Exception e) {
-            return false;
+            Thread.sleep(PEER_RETRY_DELAY_MS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 }
