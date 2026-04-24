@@ -82,7 +82,7 @@ public class NodeApp {
                 if (nextIp != null) restClient.updatePeer(nextIp, "previous", neighborInfo.getPreviousID());
             }
 
-            restClient.removeNode(myNodeId, myIp);
+            restClient.removeNode(myNodeId);
             unicastListener.stop();
             System.out.println("[System] Node safely removed from network. Goodbye.");
         }));
@@ -166,7 +166,7 @@ public class NodeApp {
 
                 // Step C: Cleanup the Naming Server
                 System.out.println("[System] Instructing Naming Server to scrub dead node...");
-                restClient.removeNode(deadNodeId, nextIp != null ? nextIp : "");
+                restClient.removeNode(deadNodeId);
 
                 System.out.println("[Success] Ring failure recovered gracefully.");
 

@@ -48,8 +48,8 @@ public class RestClient {
     }
 
 
-    public void removeNode(int nodeId, String ipAddress) {
-        String url = BASE_URL + "/nodes/" + nodeId + "?ip=" + ipAddress;
+    public void removeNode(int nodeId) {
+        String url = BASE_URL + "/nodes/" + nodeId;
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))

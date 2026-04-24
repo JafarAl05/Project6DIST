@@ -115,7 +115,7 @@ public class NamingServerTests {
         executor.submit(() -> {
             try {
                 latch.await(); // Wait for the starting pistol
-                pc2Client.removeNode(targetNodeId, "192.168.1.20");
+                pc2Client.removeNode(targetNodeId);
             } catch (Exception ignored) {}
         });
 
@@ -161,7 +161,7 @@ public class NamingServerTests {
     @AfterAll
     public static void tearDown() {
         // Clean up the network so we don't pollute the server for the next run
-        pc1Client.removeNode(HashingUtil.hash("Node-Alpha"), "192.168.1.10");
-        pc1Client.removeNode(HashingUtil.hash("Node-Omega"), "192.168.1.99");
+        pc1Client.removeNode(HashingUtil.hash("Node-Alpha"));
+        pc1Client.removeNode(HashingUtil.hash("Node-Omega"));
     }
 }

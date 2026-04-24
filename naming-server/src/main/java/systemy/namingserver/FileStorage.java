@@ -15,6 +15,7 @@ public class FileStorage {
         FileWriter myWriter = new FileWriter("nameserver_map.json");
         myWriter.write(mapString);
         myWriter.close();
+        System.out.println("Writing JSON:" + mapString);
     }
 
     static ConcurrentHashMap<Integer, String> loadMap(String filename) throws IOException {
