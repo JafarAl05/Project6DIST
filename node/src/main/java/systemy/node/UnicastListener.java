@@ -19,10 +19,12 @@ public class UnicastListener {
     }
 
     // New method: Accepts the IP and binds strictly to it!
-    public void start(String ipAddress, int port) {
+    public void start(int port) {
         try {
-            // By passing the IP here, we restrict the port to ONLY this specific container's IP
-            server = HttpServer.create(new InetSocketAddress(ipAddress, port), 0);
+            // By only providing the port, it binds to 0.0.0.0 (ALL available IPs, including the Ethernet cable)
+            server = HttpServer.create(new InetSocketAddress(port), 0);
+
+            server.createContext("/update/ping", new PingHandler());
 
             // Endpoint 1: Existing node tells us it is our PREVIOUS neighbor
             server.createContext("/update/previous", new PreviousHandler());
@@ -90,6 +92,14 @@ public class UnicastListener {
             } else {
                 sendResponse(exchange, 405, "Method Not Allowed.");
             }
+        }
+    }
+
+    class PingHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            // We don't care about the ID, we just need to send a 200 OK to prove we are alive!
+            sendResponse(exchange, 200, "Pong!");
         }
     }
 
