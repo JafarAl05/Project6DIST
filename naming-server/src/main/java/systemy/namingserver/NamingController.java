@@ -44,8 +44,8 @@ public class NamingController {
     }
 
     @DeleteMapping("/nodes/{nodeId}")
-    public String removeNode(@PathVariable("nodeId") int nodeId, @RequestParam("ip") String ip) {
-        mapManager.removeNode(nodeId, ip);
+    public String removeNode(@PathVariable("nodeId") int nodeId) {
+        mapManager.removeNode(nodeId);
         return "Node removed successfully.";
     }
 

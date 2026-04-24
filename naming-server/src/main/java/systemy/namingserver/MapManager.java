@@ -32,18 +32,18 @@ public class MapManager {
         }
     }
 
-    public void removeNode(int nodeID, String IP) {
-        boolean success = nameMap.remove(nodeID, IP);
-        if (!success) {
-            System.out.println("No Match found for node: " + nodeID + " at IP: " + IP + ". Skipping removal request.");
+    public void removeNode(int nodeID) {
+        // Just remove by key! We don't need to match the IP anymore.
+        String removedIp = nameMap.remove(nodeID);
+        if (removedIp == null) {
+            System.out.println("No Match found for node: " + nodeID);
+        } else {
+            try {
+                FileStorage.storeMap(nameMap);
+            } catch (IOException e) { }
         }
-        try {
-            FileStorage.storeMap(nameMap);
-        } catch (IOException e) {
-            System.out.println("IOException at MapManager: removeNode.");
-        }
-
     }
+
 
     public String getIP(int nodeID) {
         return nameMap.get(nodeID);

@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 
 public class RestClient {
 
-    private static final String BASE_URL = "http://localhost:8080";
+    private static final String BASE_URL = "http://server:8080";
     private final HttpClient httpClient;
 
     public RestClient() {
@@ -112,8 +112,7 @@ public class RestClient {
      * @param newId The new ID they should save in their brain
      */
     public void updatePeer(String targetIp, String parameterToUpdate, int newId) {
-        // Notice we REMOVED the :8081 because targetIp now has the port attached to it!
-        String url = "http://" + targetIp + "/update/" + parameterToUpdate + "?id=" + newId;
+        String url = "http://" + targetIp + ":8081/update/" + parameterToUpdate + "?id=" + newId;
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
