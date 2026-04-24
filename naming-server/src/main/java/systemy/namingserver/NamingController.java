@@ -13,7 +13,11 @@ import static systemy.common.HashingUtil.hash;
 
 @RestController
 public class NamingController {
-    private final MapManager mapManager = new MapManager();
+    private final MapManager mapManager;
+
+    public NamingController(MapManager mapManager) {
+        this.mapManager = mapManager;
+    }
 
     // Listen for GET requests asking for a file's location
     @GetMapping("/files/{filename}")
