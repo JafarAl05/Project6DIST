@@ -52,6 +52,7 @@ public class NodeMulticastListener implements Runnable {
 
                     System.out.println("\n📡 [Multicast Heard] Node " + newNodeHash + " is joining the ring!");
                     checkAndUpdateNeighbors(newNodeHash, newNodeIp);
+                    syncLocalNeighbors(currentId);
                     System.out.print("Choose an option: "); // Reprint terminal prompt
                 }
             }
@@ -68,27 +69,33 @@ public class NodeMulticastListener implements Runnable {
         // SCENARIO 1: We are the ONLY node in the network right now.
         // If someone joins, they immediately become our previous AND next node.
         if (currentId == nextId && currentId == prevId) {
-            neighborInfo.setNextID(newNodeHash);
-            neighborInfo.setPreviousID(newNodeHash);
-
             // Tell the new node that we are BOTH of their neighbors
-            restClient.updatePeer(newNodeIp, "previous", currentId);
-            restClient.updatePeer(newNodeIp, "next", currentId);
+            boolean previousUpdated = restClient.updatePeer(newNodeIp, "previous", currentId);
+            boolean nextUpdated = restClient.updatePeer(newNodeIp, "next", currentId);
+            if (previousUpdated && nextUpdated) {
+                neighborInfo.setNextID(newNodeHash);
+                neighborInfo.setPreviousID(newNodeHash);
+                System.out.println("[System] Ring updated for new two-node topology.");
+            } else {
+                System.err.println("[Warning] New node did not accept both neighbor updates. Local ring unchanged.");
+            }
             return;
         }
 
         // SCENARIO 2: Does the new node fit exactly after us?
         if (isBetween(currentId, newNodeHash, nextId)) {
-            neighborInfo.setNextID(newNodeHash);
             // Tell the new guy: "I am your previous node!"
-            restClient.updatePeer(newNodeIp, "previous", currentId);
+            if (restClient.updatePeer(newNodeIp, "previous", currentId)) {
+                neighborInfo.setNextID(newNodeHash);
+            }
         }
 
         // SCENARIO 3: Does the new node fit exactly before us?
         if (isBetween(prevId, newNodeHash, currentId)) {
-            neighborInfo.setPreviousID(newNodeHash);
             // Tell the new guy: "I am your next node!"
-            restClient.updatePeer(newNodeIp, "next", currentId);
+            if (restClient.updatePeer(newNodeIp, "next", currentId)) {
+                neighborInfo.setPreviousID(newNodeHash);
+            }
         }
     }
 
@@ -101,6 +108,14 @@ public class NodeMulticastListener implements Runnable {
             // Wrap-around case (e.g., left is 32000, right is 500)
             // The target must be bigger than 32000 OR smaller than 500
             return target > left || target < right;
+        }
+    }
+
+    private void syncLocalNeighbors(int currentId) {
+        int[] neighbors = restClient.getNeighborsById(currentId);
+        if (neighbors != null) {
+            neighborInfo.setPreviousID(neighbors[0]);
+            neighborInfo.setNextID(neighbors[1]);
         }
     }
 }

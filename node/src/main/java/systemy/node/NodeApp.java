@@ -68,6 +68,7 @@ public class NodeApp {
             System.out.println("[System] I am the first node in the network. (Prev/Next set to self)");
         } else {
             System.out.println("[System] " + networkSize + " other node(s) exist. Awaiting neighbor contact...");
+            syncNeighborsFromNamingServer(restClient, neighborInfo, myNodeId);
         }
 
         // --- 5. Graceful Shutdown Hook ---
@@ -118,11 +119,8 @@ public class NodeApp {
                     System.out.println("[System] Pinging NEXT node (" + neighborInfo.getNextID() + ")...");
                     String nextIp = restClient.getNodeIpById(neighborInfo.getNextID());
 
-                    try {
-                        if (nextIp == null) throw new Exception("IP not found in Naming Server.");
-                        restClient.updatePeer(nextIp, "ping", myNodeId);
-                    } catch (Exception e) {
-                        handleNodeFailure(neighborInfo, restClient, myNodeId, nextIp);
+                    if (nextIp == null || !restClient.pingPeer(nextIp)) {
+                        handleNodeFailure(neighborInfo, restClient, myNodeId);
                     }
                     break;
 
@@ -136,20 +134,17 @@ public class NodeApp {
         }
     }
 
-    private static void handleNodeFailure(NeighborInfo neighborInfo, RestClient restClient, int myNodeId, String nextIp) {
+    private static void handleNodeFailure(NeighborInfo neighborInfo, RestClient restClient, int myNodeId) {
         int deadNodeId = neighborInfo.getNextID();
         System.err.println("[Alert] PING FAILED! Node " + deadNodeId + " is unresponsive.");
         System.out.println("[System] Requesting dead node's neighbors from Naming Server...");
 
-        String neighborsJson = restClient.getNeighborsOfFailedNode(deadNodeId);
-        System.out.println("[System] Naming Server replied: " + neighborsJson);
+        int[] neighbors = restClient.getNeighborsById(deadNodeId);
+        System.out.println("[System] Naming Server replied: " + (neighbors == null ? "null" : neighbors[0] + "," + neighbors[1]));
 
-        if (neighborsJson != null) {
+        if (neighbors != null) {
             try {
-                // Parse the JSON string to extract the surviving neighbor IDs
-                String cleanedJson = neighborsJson.replaceAll("[^0-9,]", "");
-                String[] parts = cleanedJson.split(",");
-                int survivingNext = Integer.parseInt(parts[1]);
+                int survivingNext = neighbors[1];
 
                 System.out.println("[System] Commencing ring repair...");
 
@@ -174,6 +169,27 @@ public class NodeApp {
                 System.err.println("[Error] Ring repair failed during parsing or network update.");
             }
         }
+    }
+
+    private static void syncNeighborsFromNamingServer(RestClient restClient, NeighborInfo neighborInfo, int myNodeId) {
+        for (int attempt = 1; attempt <= 5; attempt++) {
+            int[] neighbors = restClient.getNeighborsById(myNodeId);
+            if (neighbors != null) {
+                neighborInfo.setPreviousID(neighbors[0]);
+                neighborInfo.setNextID(neighbors[1]);
+                System.out.println("[System] Neighbor sync complete. Prev=" + neighbors[0] + ", Next=" + neighbors[1]);
+                return;
+            }
+
+            try {
+                Thread.sleep(500L);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
+
+        System.err.println("[Warning] Could not sync neighbors from Naming Server after bootstrap.");
     }
 
     private static void printHeader() {

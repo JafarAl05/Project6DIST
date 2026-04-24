@@ -18,17 +18,19 @@ public class UnicastListener {
         this.neighborInfo = neighborInfo;
     }
 
-    // New method: Accepts the IP and binds strictly to it!
+    // Bind to all interfaces so peer containers can always reach this node.
     public void start(String ipAddress, int port) {
         try {
-            // By passing the IP here, we restrict the port to ONLY this specific container's IP
-            server = HttpServer.create(new InetSocketAddress(ipAddress, port), 0);
+            server = HttpServer.create(new InetSocketAddress(port), 0);
 
             // Endpoint 1: Existing node tells us it is our PREVIOUS neighbor
             server.createContext("/update/previous", new PreviousHandler());
 
             // Endpoint 2: Existing node tells us it is our NEXT neighbor
             server.createContext("/update/next", new NextHandler());
+
+            // Endpoint 3: Liveness probe used for failure detection
+            server.createContext("/update/ping", new PingHandler());
 
             server.setExecutor(null); // Use the default executor
             server.start();
@@ -87,6 +89,17 @@ public class UnicastListener {
                 } else {
                     sendResponse(exchange, 400, "Bad Request: Missing ID parameter.");
                 }
+            } else {
+                sendResponse(exchange, 405, "Method Not Allowed.");
+            }
+        }
+    }
+
+    class PingHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if ("POST".equals(exchange.getRequestMethod())) {
+                sendResponse(exchange, 200, "OK");
             } else {
                 sendResponse(exchange, 405, "Method Not Allowed.");
             }

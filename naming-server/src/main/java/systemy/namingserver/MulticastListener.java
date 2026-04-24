@@ -2,12 +2,14 @@ package systemy.namingserver;
 
 import org.springframework.stereotype.Component;
 import jakarta.annotation.PostConstruct;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import systemy.common.HashingUtil;
 
 @Component
+@ConditionalOnProperty(name = "systemy.multicast.enabled", havingValue = "true", matchIfMissing = true)
 public class MulticastListener implements Runnable {
 
     // Multicast communication parameters

@@ -10,10 +10,16 @@ import java.util.regex.Pattern;
 
 public class RestClient {
 
-    private static final String BASE_URL = "http://server:8080";
+    private static final String DEFAULT_BASE_URL = "http://server:8080";
     private final HttpClient httpClient;
+    private final String baseUrl;
 
     public RestClient() {
+        this(System.getProperty("systemy.namingServerUrl", DEFAULT_BASE_URL));
+    }
+
+    public RestClient(String baseUrl) {
+        this.baseUrl = baseUrl;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(5))
                 .build();
@@ -21,7 +27,7 @@ public class RestClient {
 
 
     public boolean registerNode(int nodeId, String ipAddress) {
-        String url = BASE_URL + "/nodes";
+        String url = baseUrl + "/nodes";
 
         String jsonPayload = String.format("{\"nodeId\": %d, \"ipAddress\": \"%s\"}", nodeId, ipAddress);
 
@@ -49,7 +55,7 @@ public class RestClient {
 
 
     public void removeNode(int nodeId) {
-        String url = BASE_URL + "/nodes/" + nodeId;
+        String url = baseUrl + "/nodes/" + nodeId;
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -70,7 +76,7 @@ public class RestClient {
 
 
     public String getFileLocation(String filename) {
-        String url = BASE_URL + "/files/" + filename;
+        String url = baseUrl + "/files/" + filename;
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -111,7 +117,7 @@ public class RestClient {
      * @param parameterToUpdate Either "previous" or "next"
      * @param newId The new ID they should save in their brain
      */
-    public void updatePeer(String targetIp, String parameterToUpdate, int newId) {
+    public boolean updatePeer(String targetIp, String parameterToUpdate, int newId) {
         String url = "http://" + targetIp + ":8081/update/" + parameterToUpdate + "?id=" + newId;
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -124,10 +130,13 @@ public class RestClient {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
                 System.out.println("Successfully updated peer at " + targetIp);
+                return true;
             }
+            System.err.println("Peer at " + targetIp + " responded with HTTP " + response.statusCode());
         } catch (Exception e) {
             System.err.println("Could not reach peer at " + targetIp + ". They might be dead!");
         }
+        return false;
     }
 
     // =========================================================================
@@ -138,7 +147,7 @@ public class RestClient {
      * Note: You must tell Role B to create this GET /nodes/{id}/neighbors endpoint!
      */
     public String getNeighborsOfFailedNode(int failedNodeId) {
-        String url = BASE_URL + "/nodes/" + failedNodeId + "/neighbors";
+        String url = baseUrl + "/nodes/" + failedNodeId + "/neighbors";
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -150,9 +159,11 @@ public class RestClient {
             if (response.statusCode() == 200) {
                 return response.body(); // Role B should return a JSON with {previousID, nextID}
             } else {
+                System.err.println("Failed to get neighbors for node " + failedNodeId + ". HTTP " + response.statusCode());
                 return null;
             }
         } catch (Exception e) {
+            System.err.println("Could not retrieve neighbors for node " + failedNodeId + ": " + e.getMessage());
             return null;
         }
     }
@@ -165,7 +176,7 @@ public class RestClient {
      * Note: Role B needs to ensure this endpoint exists.
      */
     public String getNodeIpById(int nodeId) {
-        String url = BASE_URL + "/nodes/" + nodeId + "/ip";
+        String url = baseUrl + "/nodes/" + nodeId + "/ip";
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -179,5 +190,43 @@ public class RestClient {
             }
         } catch (Exception e) {}
         return null;
+    }
+
+    public int[] getNeighborsById(int nodeId) {
+        String neighborsJson = getNeighborsOfFailedNode(nodeId);
+        if (neighborsJson == null) {
+            return null;
+        }
+
+        Pattern previousPattern = Pattern.compile("\"previousId\"\\s*:\\s*(\\d+)");
+        Pattern nextPattern = Pattern.compile("\"nextId\"\\s*:\\s*(\\d+)");
+        Matcher previousMatcher = previousPattern.matcher(neighborsJson);
+        Matcher nextMatcher = nextPattern.matcher(neighborsJson);
+
+        if (previousMatcher.find() && nextMatcher.find()) {
+            return new int[]{
+                    Integer.parseInt(previousMatcher.group(1)),
+                    Integer.parseInt(nextMatcher.group(1))
+            };
+        }
+
+        System.err.println("Could not parse neighbor payload: " + neighborsJson);
+        return null;
+    }
+
+    public boolean pingPeer(String targetIp) {
+        String url = "http://" + targetIp + ":8081/update/ping";
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .build();
+
+        try {
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            return response.statusCode() == 200;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

@@ -19,8 +19,8 @@ public class RoutingAlgorithm {
                 maxNodeId = nodeId;
             }
 
-            // Look only at nodes with a hash SMALLER than the file hash
-            if (nodeId < fileHash) {
+            // Look at nodes with a hash smaller than or equal to the file hash
+            if (nodeId <= fileHash) {
                 int difference = fileHash - nodeId;
 
                 // Find the node with the smallest difference

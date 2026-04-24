@@ -16,6 +16,7 @@ public class MapManager {
             nameMap = FileStorage.loadMap("nameserver_map.json");
         } catch (IOException e) {
             System.out.println("IOException at MapManager Init.");
+            nameMap = new ConcurrentHashMap<>();
         }
     }
 
@@ -47,6 +48,15 @@ public class MapManager {
 
     public String getIP(int nodeID) {
         return nameMap.get(nodeID);
+    }
+
+    public void clear() {
+        nameMap.clear();
+        try {
+            FileStorage.storeMap(nameMap);
+        } catch (IOException e) {
+            System.out.println("IOException at MapManager: clear.");
+        }
     }
 
     public int[] getNeighbors(int failedNodeId) {
