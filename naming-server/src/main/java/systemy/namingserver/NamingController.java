@@ -45,6 +45,8 @@ public class NamingController {
         if (mapManager.getNameMap().containsKey(request.getNodeId())) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Node already exists!");
         }
+        System.out.println("Total map size is: " + mapManager.getNameMap().size());
+        System.out.println("Map looks like:" + mapManager.getNameMap().);
 
         // CHANGE .nodeId() to .getNodeId() AND .ipAddress() to .getIpAddress()
         mapManager.addNode(request.getNodeId(), request.getIpAddress());
