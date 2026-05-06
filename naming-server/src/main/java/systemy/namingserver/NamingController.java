@@ -41,13 +41,13 @@ public class NamingController {
 
     @PostMapping("/nodes")
     public ResponseEntity<String> registerNode(@RequestBody NodeRegistrationRequest request) {
-        // Check if the map already contains this node ID
-        if (mapManager.getNameMap().containsKey(request.nodeId())) {
-            // Return HTTP 409 Conflict if it's a duplicate
+        // CHANGE .nodeId() to .getNodeId()
+        if (mapManager.getNameMap().containsKey(request.getNodeId())) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Node already exists!");
         }
 
-        mapManager.addNode(request.nodeId(), request.ipAddress());
+        // CHANGE .nodeId() to .getNodeId() AND .ipAddress() to .getIpAddress()
+        mapManager.addNode(request.getNodeId(), request.getIpAddress());
         return ResponseEntity.ok("Node registered successfully!");
     }
 
